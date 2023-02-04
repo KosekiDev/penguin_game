@@ -5,7 +5,7 @@ use camera::GameCameraPlugin;
 use gameover::GameoverPlugin;
 use gameplay::GameplayPlugin;
 use main_menu::MainMenuPlugin;
-use player::PlayerScore;
+use player::{PlayerScore, PlayerStats};
 
 mod assets;
 mod camera;
@@ -34,6 +34,7 @@ fn main() {
     let mut app = App::new();
     app.insert_resource(ClearColor(Color::rgb(0.9, 0.92, 0.94)))
         .insert_resource(PlayerScore(0))
+        .insert_resource(PlayerStats::default())
         .add_plugins(
             DefaultPlugins
                 .set(WindowPlugin {
@@ -57,10 +58,10 @@ fn main() {
         .add_plugin(GameCameraPlugin)
         .add_plugin(AssetsPlugin)
         // Screen plugins
-        .add_plugin(GameplayPlugin)
         .add_plugin(MainMenuPlugin)
+        .add_plugin(GameplayPlugin)
         .add_plugin(GameoverPlugin)
-        .add_system(quit_game);
+        .add_system(quit_game); // should spawn another menu for pause the game and quit the game
 
     app.run();
 }

@@ -8,3 +8,9 @@ impl PlayerScore {
         self.0 += points;
     }
 }
+
+#[derive(Resource, Debug, Default)]
+pub struct PlayerStats {
+    pub misses: u32,
+    pub combos_count: u32,
+}

@@ -7,7 +7,7 @@ use bevy::prelude::*;
 use crate::{
     assets::{EntitiesAtlas, FontsAtlas},
     penguins::{FishThrowed, PenguinIdleAnimated, PENGUIN_THROW_ORIGIN_Y},
-    player::PlayerScore,
+    player::{PlayerScore, PlayerStats},
     stage::StageComponent,
     words::{TextEnemy, WordsResource},
     GameState, CASE_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH,
@@ -125,9 +125,17 @@ fn key_pressed(
     atlases: Res<EntitiesAtlas>,
     mut stage: Query<&mut StageComponent>,
     mut penguin: Query<&mut PenguinIdleAnimated, Without<Target>>,
+    mut player_stats: ResMut<PlayerStats>,
 ) {
     if let Some(key) = inputs.iter().next() {
         let mut target: Option<(Entity, Mut<Enemy>, &Children, &GlobalTransform)> = None;
+        let mut stage = stage.single_mut();
+
+        let mut miss = || {
+            stage.decrease_bonus();
+            player_stats.combos_count = 0;
+            player_stats.misses += 1;
+        };
 
         if enemy.is_empty() {
             // check target
@@ -159,8 +167,7 @@ fn key_pressed(
             }
             // if no target selected, the player missed. Decrease the bonus
             if !target_found {
-                let mut stage = stage.single_mut();
-                stage.decrease_bonus();
+                miss();
             }
         }
 
@@ -200,12 +207,10 @@ fn key_pressed(
         } else {
             enemy.points = (enemy.points as f32 * 0.9f32) as u32;
 
-            let mut stage = stage.single_mut();
-            stage.decrease_bonus();
+            miss();
         }
 
         if text.sections[0].value.is_empty() {
-            // commands.entity(text_entity).despawn_recursive();
             commands
                 .entity(enemy_entity)
                 .remove::<EnemyAnimated>()
@@ -220,6 +225,7 @@ fn give_point_when_dead(
     enemy_query: Query<(&Enemy, Option<&GeneratedEnemy>)>,
     mut stage: Query<&mut StageComponent>,
     mut score: ResMut<PlayerScore>,
+    mut player_stats: ResMut<PlayerStats>,
 ) {
     let Some( target ) = target.iter().next() else {
         return;
@@ -229,6 +235,12 @@ fn give_point_when_dead(
     let (enemy, generated) = enemy_query.get(target).unwrap();
 
     score.add((enemy.points as f32 * (1.0 + stage.bonus())) as u32);
+    player_stats.combos_count += 1;
+
+    println!(
+        "enemy.rs:241 | Combos: {} ; Misses: {}",
+        player_stats.combos_count, player_stats.misses
+    );
 
     stage.increase_bonus();
     // Only non generated entity descrease the counter

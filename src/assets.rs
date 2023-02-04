@@ -1,4 +1,4 @@
-use bevy::prelude::*;
+use bevy::{audio::AudioSink, prelude::*};
 
 use crate::{defeat_zone::DEFEAT_ZONE_HEIGHT, CASE_SIZE};
 
@@ -27,6 +27,11 @@ pub struct FontsAtlas {
     pub common_font: Handle<Font>,
 }
 
+#[derive(Resource, Default)]
+pub struct AudioAtlas {
+    pub music: Option<Handle<AudioSink>>,
+}
+
 pub struct AssetsPlugin;
 impl Plugin for AssetsPlugin {
     fn build(&self, app: &mut App) {
@@ -38,18 +43,7 @@ fn load_assets(
     mut commands: Commands,
     assets: Res<AssetServer>,
     mut texture_atlases: ResMut<Assets<TextureAtlas>>,
-    audio: Res<Audio>,
 ) {
-    let music = assets.load("audio/background.ogg");
-    audio.play_with_settings(
-        music,
-        PlaybackSettings {
-            repeat: true,
-            volume: 1.0,
-            speed: 1.0,
-        },
-    );
-
     let image_handle = assets.load("penguin.png");
     let mut atlas = TextureAtlas::new_empty(image_handle.clone(), Vec2::splat(256.0));
 
@@ -139,4 +133,5 @@ fn load_assets(
     commands.insert_resource(FontsAtlas {
         common_font: assets.load("fonts/QuattrocentoSans-Regular.ttf"),
     });
+    commands.insert_resource(AudioAtlas::default())
 }

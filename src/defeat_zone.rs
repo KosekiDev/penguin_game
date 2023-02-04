@@ -46,7 +46,6 @@ fn gameover(
         let offset = enemy.translation.y - defeat_zone.translation.y;
         if offset.abs() <= DEFEAT_ZONE_HEIGHT / 2.0 {
             state.set(GameState::GameOver).unwrap();
-            println!("{:?}", state.current());
             return;
         }
     }
