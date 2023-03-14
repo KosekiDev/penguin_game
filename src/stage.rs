@@ -5,7 +5,7 @@ use bevy::prelude::*;
 use crate::{
     assets::FontsAtlas,
     enemy::{MIN_SPAWN_TIME_INTERVAL, SPAWN_TIME_INTERVAL},
-    player::PlayerScore,
+    player::{PlayerScore, PlayerStats, PlayerCombosChanged},
     GameState, CASE_SIZE, WINDOW_HEIGHT,
 };
 
@@ -100,6 +100,9 @@ pub struct StageLevelText {
 #[derive(Component)]
 pub struct StageScoreText;
 
+#[derive(Component)]
+pub struct PlayerCombosText;
+
 pub struct StagePlugin;
 impl Plugin for StagePlugin {
     fn build(&self, app: &mut App) {
@@ -110,7 +113,8 @@ impl Plugin for StagePlugin {
         .add_system_set(
             SystemSet::on_update(GameState::Gameplay).with_system(animate_score_changing),
         )
-        .add_system_set(SystemSet::on_update(GameState::Gameplay).with_system(stage_update));
+        .add_system_set(SystemSet::on_update(GameState::Gameplay).with_system(stage_update))
+        .add_system_set(SystemSet::on_update(GameState::Gameplay).with_system(combos_update));
     }
 }
 
@@ -188,6 +192,35 @@ fn draw_stage_data(mut commands: Commands, fonts: Res<FontsAtlas>) {
             ..default()
         })
         .insert(StageScoreText);
+
+    let combos_text = "Combos ".to_string();
+    let combos_number = format!("{}", 0);
+
+    commands
+        .spawn(Text2dBundle {
+            text: Text::from_sections([
+                TextSection::new(
+                    combos_text,
+                    TextStyle {
+                        font: fonts.common_font.clone(),
+                        font_size: 22.0,
+                        color: Color::BLACK,
+                    },
+                ),
+                TextSection::new(
+                    combos_number,
+                    TextStyle {
+                        font: fonts.common_font.clone(),
+                        font_size: 25.0,
+                        color: Color::BLACK,
+                    },
+                ),
+            ])
+            .with_alignment(TextAlignment::BOTTOM_LEFT),
+            transform: Transform::from_translation(Vec3::new(x, y - 60.0, z)),
+            ..default()
+        })
+        .insert(PlayerCombosText);
 }
 
 fn stage_update(
@@ -213,6 +246,22 @@ fn stage_update(
 
     level_text.sections[1].value = format!("{}", stage.level);
     score_text.sections[1].value = format!("{}", player_score.0);
+}
+
+fn combos_update(
+    mut commands: Commands,
+    mut combos: Query<( Entity , &mut Text), With<PlayerCombosChanged>>,
+    player_stats: Res<PlayerStats>
+) {
+    if combos.is_empty() {
+        return;
+    }
+
+    let mut combos = combos.single_mut();
+
+    combos.1.sections[1].value = format!("{}", player_stats.combos_count);
+
+    commands.entity(combos.0).remove::<PlayerCombosChanged>();
 }
 
 fn animate_score_changing(

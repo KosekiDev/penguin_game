@@ -7,8 +7,8 @@ use bevy::prelude::*;
 use crate::{
     assets::{EntitiesAtlas, FontsAtlas},
     penguins::{FishThrowed, PenguinIdleAnimated, PENGUIN_THROW_ORIGIN_Y},
-    player::{PlayerScore, PlayerStats},
-    stage::StageComponent,
+    player::{PlayerCombosChanged, PlayerScore, PlayerStats},
+    stage::{PlayerCombosText, StageComponent},
     words::{TextEnemy, WordsResource},
     GameState, CASE_SIZE, WINDOW_HEIGHT, WINDOW_WIDTH,
 };
@@ -126,15 +126,21 @@ fn key_pressed(
     mut stage: Query<&mut StageComponent>,
     mut penguin: Query<&mut PenguinIdleAnimated, Without<Target>>,
     mut player_stats: ResMut<PlayerStats>,
+    combos: Query<Entity, (With<PlayerCombosText>, Without<PlayerCombosChanged>)>,
 ) {
     if let Some(key) = inputs.iter().next() {
         let mut target: Option<(Entity, Mut<Enemy>, &Children, &GlobalTransform)> = None;
         let mut stage = stage.single_mut();
 
-        let mut miss = || {
+        let mut miss = |commands: &mut Commands| {
             stage.decrease_bonus();
             player_stats.combos_count = 0;
             player_stats.misses += 1;
+
+            if !combos.is_empty() {
+                let combos = combos.single();
+                commands.entity(combos).insert(PlayerCombosChanged);
+            }
         };
 
         if enemy.is_empty() {
@@ -167,7 +173,7 @@ fn key_pressed(
             }
             // if no target selected, the player missed. Decrease the bonus
             if !target_found {
-                miss();
+                miss(&mut commands);
             }
         }
 
@@ -207,7 +213,7 @@ fn key_pressed(
         } else {
             enemy.points = (enemy.points as f32 * 0.9f32) as u32;
 
-            miss();
+            miss(&mut commands);
         }
 
         if text.sections[0].value.is_empty() {
@@ -221,21 +227,27 @@ fn key_pressed(
 }
 
 fn give_point_when_dead(
+    mut commands: Commands,
     target: RemovedComponents<Target>,
     enemy_query: Query<(&Enemy, Option<&GeneratedEnemy>)>,
     mut stage: Query<&mut StageComponent>,
     mut score: ResMut<PlayerScore>,
     mut player_stats: ResMut<PlayerStats>,
+    combos: Query<Entity, With<PlayerCombosText>>,
 ) {
     let Some( target ) = target.iter().next() else {
         return;
     };
+
+    let combos = combos.single();
 
     let mut stage = stage.single_mut();
     let (enemy, generated) = enemy_query.get(target).unwrap();
 
     score.add((enemy.points as f32 * (1.0 + stage.bonus())) as u32);
     player_stats.combos_count += 1;
+
+    commands.entity(combos).insert(PlayerCombosChanged);
 
     println!(
         "enemy.rs:241 | Combos: {} ; Misses: {}",

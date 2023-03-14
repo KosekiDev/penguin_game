@@ -14,3 +14,6 @@ pub struct PlayerStats {
     pub misses: u32,
     pub combos_count: u32,
 }
+
+#[derive(Component)]
+pub struct PlayerCombosChanged;
